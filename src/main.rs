@@ -1,10 +1,11 @@
 use amethyst::{
+    assets::{AssetStorage, Handle, Loader, Processor},
+    ecs::prelude::{Component, DenseVecStorage, ReadExpect, Resources, SystemData},
     core::transform::{Transform, TransformBundle},
-    ecs::prelude::{ReadExpect, Resources, SystemData},
     prelude::*,
     renderer::{
         pass::DrawShadedDesc,
-        Camera,
+        SpriteRender,
         rendy::{
             factory::Factory,
             graph::{
@@ -14,7 +15,8 @@ use amethyst::{
             hal::{format::Format, image},
         },
         types::DefaultBackend,
-        GraphCreator, RenderingSystem,
+        Camera, GraphCreator, ImageFormat, RenderingSystem, SpriteSheet, SpriteSheetFormat,
+        Texture,
     },
     utils::application_root_dir,
     window::{ScreenDimensions, Window, WindowBundle},
@@ -25,6 +27,37 @@ struct MyState;
 pub const ARENA_HEIGHT: f32 = 100.;
 pub const ARENA_WIDTH: f32 = 100.;
 
+struct Square {
+    size: f32,
+}
+
+impl Component for Square {
+    type Storage = DenseVecStorage<Self>;
+}
+
+fn load_sprite_sheet(world: &mut World) -> Handle<SpriteSheet> {
+    let texture_handle = {
+        let loader = world.read_resource::<Loader>();
+        let texture_storage = world.read_resource::<AssetStorage<Texture>>();
+
+        loader.load(
+            "textures/box.png",
+            ImageFormat::default(),
+            (),
+            &texture_storage,
+        )
+    };
+
+    let loader = world.read_resource::<Loader>();
+    let sprite_sheet_store = world.read_resource::<AssetStorage<SpriteSheet>>();
+
+    loader.load(
+        "textures/box_spritesheet.ron",
+        SpriteSheetFormat(texture_handle),
+        (),
+        &sprite_sheet_store,
+    )
+}
 
 fn initialize_camera(world: &mut World) {
     let mut transform = Transform::default();
@@ -37,8 +70,33 @@ fn initialize_camera(world: &mut World) {
         .build();
 }
 
+fn initialize_square(world: &mut World, sprite_sheet: Handle<SpriteSheet>) {
+    let mut transform = Transform::default();
+    transform.set_translation_xyz(10., 10., 0.);
+
+    let render = SpriteRender {
+        sprite_sheet: sprite_sheet.clone(),
+        sprite_number: 0,
+    };
+
+    world
+        .create_entity()
+        .with(render.clone())
+        .with(Square { size: 10. })
+        .with(transform)
+        .build();
+}
+
 impl SimpleState for MyState {
-    fn on_start(&mut self, _data: StateData<'_, GameData<'_, '_>>) {}
+    fn on_start(&mut self, data: StateData<'_, GameData<'_, '_>>) {
+        let world = data.world;
+        world.register::<Square>();
+
+        let handle = load_sprite_sheet(world);
+        initialize_camera(world);
+        initialize_square(world, handle);
+
+    }
 }
 
 fn main() -> amethyst::Result<()> {
@@ -50,6 +108,9 @@ fn main() -> amethyst::Result<()> {
     let display_config_path = resources_dir.join("display_config.ron");
 
     let game_data = GameDataBuilder::default()
+        .with(Processor::<SpriteSheet>::new(),
+        "sprite_sheet_processor",
+        &[],)
         .with_bundle(WindowBundle::from_config_path(display_config_path))?
         .with_bundle(TransformBundle::new())?
         .with_thread_local(RenderingSystem::<DefaultBackend, _>::new(
