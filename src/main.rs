@@ -1,11 +1,10 @@
 use amethyst::{
-    assets::{AssetStorage, Handle, Loader, Processor},
-    ecs::prelude::{Component, DenseVecStorage, ReadExpect, Resources, SystemData},
-    core::transform::{Transform, TransformBundle},
+    assets::{Processor},
+    ecs::prelude::{ReadExpect, Resources, SystemData},
+    core::transform::{TransformBundle},
     prelude::*,
     renderer::{
-        pass::DrawShadedDesc,
-        SpriteRender,
+        pass::DrawFlat2DDesc,
         rendy::{
             factory::Factory,
             graph::{
@@ -15,89 +14,15 @@ use amethyst::{
             hal::{format::Format, image},
         },
         types::DefaultBackend,
-        Camera, GraphCreator, ImageFormat, RenderingSystem, SpriteSheet, SpriteSheetFormat,
-        Texture,
+        GraphCreator, RenderingSystem, SpriteSheet,
     },
     utils::application_root_dir,
     window::{ScreenDimensions, Window, WindowBundle},
+    
 };
+use crate::tetris::MyState;
 
-struct MyState;
-
-pub const ARENA_HEIGHT: f32 = 100.;
-pub const ARENA_WIDTH: f32 = 100.;
-
-struct Square {
-    size: f32,
-}
-
-impl Component for Square {
-    type Storage = DenseVecStorage<Self>;
-}
-
-fn load_sprite_sheet(world: &mut World) -> Handle<SpriteSheet> {
-    let texture_handle = {
-        let loader = world.read_resource::<Loader>();
-        let texture_storage = world.read_resource::<AssetStorage<Texture>>();
-
-        loader.load(
-            "textures/box.png",
-            ImageFormat::default(),
-            (),
-            &texture_storage,
-        )
-    };
-
-    let loader = world.read_resource::<Loader>();
-    let sprite_sheet_store = world.read_resource::<AssetStorage<SpriteSheet>>();
-
-    loader.load(
-        "textures/box_spritesheet.ron",
-        SpriteSheetFormat(texture_handle),
-        (),
-        &sprite_sheet_store,
-    )
-}
-
-fn initialize_camera(world: &mut World) {
-    let mut transform = Transform::default();
-    transform.set_translation_xyz(ARENA_WIDTH * 0.5, ARENA_HEIGHT * 0.5, 1.);
-
-    world
-        .create_entity()
-        .with(Camera::standard_2d(ARENA_WIDTH, ARENA_HEIGHT))
-        .with(transform)
-        .build();
-}
-
-fn initialize_square(world: &mut World, sprite_sheet: Handle<SpriteSheet>) {
-    let mut transform = Transform::default();
-    transform.set_translation_xyz(10., 10., 0.);
-
-    let render = SpriteRender {
-        sprite_sheet: sprite_sheet.clone(),
-        sprite_number: 0,
-    };
-
-    world
-        .create_entity()
-        .with(render.clone())
-        .with(Square { size: 10. })
-        .with(transform)
-        .build();
-}
-
-impl SimpleState for MyState {
-    fn on_start(&mut self, data: StateData<'_, GameData<'_, '_>>) {
-        let world = data.world;
-        world.register::<Square>();
-
-        let handle = load_sprite_sheet(world);
-        initialize_camera(world);
-        initialize_square(world, handle);
-
-    }
-}
+mod tetris;
 
 fn main() -> amethyst::Result<()> {
     amethyst::start_logger(Default::default());
@@ -107,10 +32,13 @@ fn main() -> amethyst::Result<()> {
     let resources_dir = app_root.join("resources");
     let display_config_path = resources_dir.join("display_config.ron");
 
+    use crate::tetris::SpinnerSystem;
+
     let game_data = GameDataBuilder::default()
         .with(Processor::<SpriteSheet>::new(),
         "sprite_sheet_processor",
         &[],)
+        .with(SpinnerSystem, "spinner_system", &[])
         .with_bundle(WindowBundle::from_config_path(display_config_path))?
         .with_bundle(TransformBundle::new())?
         .with_thread_local(RenderingSystem::<DefaultBackend, _>::new(
@@ -182,7 +110,7 @@ impl GraphCreator<DefaultBackend> for RenderingGraph {
 
         let opaque = graph_builder.add_node(
             SubpassBuilder::new()
-                .with_group(DrawShadedDesc::new().builder())
+                .with_group(DrawFlat2DDesc::new().builder())
                 .with_color(color)
                 .with_depth_stencil(depth)
                 .into_pass(),
