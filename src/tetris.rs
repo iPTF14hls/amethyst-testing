@@ -9,8 +9,8 @@ use amethyst::{
 
 pub struct MyState;
 
-const ARENA_HEIGHT: f32 = 512.;
-const ARENA_WIDTH: f32 = 512.;
+const ARENA_HEIGHT: f32 = 256.;
+const ARENA_WIDTH: f32 = 256.;
 
 pub struct Velocity {
     pub dx: f32,
