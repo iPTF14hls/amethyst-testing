@@ -1,3 +1,5 @@
+#![feature(exclusive_range_pattern)]
+
 use amethyst::{
     assets::{Processor},
     ecs::prelude::{ReadExpect, Resources, SystemData},
@@ -21,7 +23,6 @@ use amethyst::{
     
 };
 use crate::tetris::MyState;
-
 mod tetris;
 
 

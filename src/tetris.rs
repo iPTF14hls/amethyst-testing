@@ -1,3 +1,4 @@
+
 use amethyst::{
     assets::{AssetStorage, Loader, Handle},
     core::transform::Transform,
@@ -7,6 +8,7 @@ use amethyst::{
     core::{Float, math::Vector3},
 };
 
+use std::f32;
 pub struct MyState;
 
 const ARENA_HEIGHT: f32 = 256.;
@@ -45,16 +47,32 @@ impl<'s> System<'s> for SpinnerSystem {
     type SystemData = (
         WriteStorage<'s, Transform>,
         WriteStorage<'s, Spinner>,
+        WriteStorage<'s, SpriteRender>,
     );
 
-    fn run(&mut self, (mut transforms, mut progress): Self::SystemData) {
-        for (pos, prog) in (&mut transforms, &mut progress).join() {
+    fn run(&mut self, (mut transforms, mut progress, mut sprite): Self::SystemData) {
+        const PI: f32 = f32::consts::PI;
+        for (pos, prog, spr) in (&mut transforms, &mut progress, &mut sprite).join() {
             let (dx, dy) = (prog.theta.cos(), prog.theta.sin());
             let (dx, dy) = (dx*prog.mag, dy*prog.mag);
             let trans = pos.translation_mut();
             trans.x = Float::from_f32(prog.center.0 + dx);
             trans.y = Float::from_f32(prog.center.1 + dy);
 
+            let rot = (prog.theta*(180./PI)) as usize % 360;
+            
+            let i = match rot {
+                0..45 => 0,
+                45..90 => 1,
+                90..135 => 0,
+                135..180 => 1,
+                180..225 => 0,
+                225..270 => 1,
+                270..315 => 0,
+                315..360 => 1,
+                _ => 0,
+            };
+            spr.sprite_number = i;
             prog.theta += 0.01;
         }
     }
@@ -79,7 +97,7 @@ fn load_sprite_sheet(world: &mut World) -> Handle<SpriteSheet> {
 
     let loader = world.read_resource::<Loader>();
     let sprite_sheet_store = world.read_resource::<AssetStorage<SpriteSheet>>();
-
+    
     loader.load(
         "textures/box_spritesheet.ron",
         SpriteSheetFormat(texture_handle),
@@ -109,7 +127,7 @@ fn initialize_square(world: &mut World, sprite_sheet: Handle<SpriteSheet>) {
         sprite_sheet: sprite_sheet.clone(),
         sprite_number: 0,
     };
-
+    
     world
         .create_entity()
         .with(render.clone())
