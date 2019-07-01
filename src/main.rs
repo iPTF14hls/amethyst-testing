@@ -22,7 +22,7 @@ use amethyst::{
 };
 use crate::tetris::MyState;
 mod tetris;
-
+mod utils;
 
 fn main() -> amethyst::Result<()> {
     amethyst::start_logger(Default::default());
@@ -32,13 +32,14 @@ fn main() -> amethyst::Result<()> {
     let resources_dir = app_root.join("resources");
     let display_config_path = resources_dir.join("display_config.ron");
 
-    use crate::tetris::SpinnerSystem;
+    use crate::tetris::{GridUpdate, GameOfLife};
 
     let game_data = GameDataBuilder::default()
         .with(Processor::<SpriteSheet>::new(),
         "sprite_sheet_processor",
         &[],)
-        .with(SpinnerSystem, "spinner_system", &[])
+        .with(GridUpdate, "grid_update", &[])
+        .with(GameOfLife, "game_of_life", &[])
         .with_bundle(WindowBundle::from_config_path(display_config_path))?
         .with_bundle(TransformBundle::new())?
         .with_thread_local(RenderingSystem::<DefaultBackend, _>::new(
