@@ -22,12 +22,8 @@ impl<T: Default + Clone + Copy> Array2d<T> {
     //They not only do a conversion but also bounds checking.
     pub fn pos_to_i(&self, (x, y):(usize, usize)) -> Option<usize> {
         let (wid, hei) = self.dim;
-        if x < wid && y < hei {
-            Some(wid*y+x)
-        }
-        else {
-            None
-        }
+
+        Some((y%hei)*wid + (x%wid))
     }
 
     pub fn i_to_pos(&self, i: usize) -> Option<(usize, usize)> {

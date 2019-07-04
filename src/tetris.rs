@@ -12,8 +12,8 @@ use rand::Rng;
 use std::f32;
 pub struct MyState;
 
-const ARENA_HEIGHT: f32 = 8192.;
-const ARENA_WIDTH: f32 = 8192.;
+const CELL_HEIGHT: f32 = 128.;
+const CELL_WIDTH: f32 = 128.;
 
 pub struct Velocity {
     pub dx: f32,
@@ -109,11 +109,9 @@ impl<'s> System<'s> for GameOfLife {
                 }
             });
 
-            (0..w * h)
-                .map(|i| (i % w, i / w))
-                .for_each(|pos|{
-                    blocks[pos] = block_buffer[pos];
-                });
+            (0..w * h).map(|i| (i % w, i / w)).for_each(|pos| {
+                blocks[pos] = block_buffer[pos];
+            });
         }
     }
 }
@@ -181,7 +179,7 @@ fn initialize_grid(world: &mut World, sprite_sheet: &Handle<SpriteSheet>) {
     let mut rng = rand::thread_rng();
     transform.set_translation_xyz(0., 0., 0.);
 
-    let (wid, hei) = (512, 512);
+    let (wid, hei) = (CELL_WIDTH as usize, CELL_HEIGHT as usize);
     let len = wid * hei;
 
     let blocks = {
@@ -203,17 +201,15 @@ fn initialize_grid(world: &mut World, sprite_sheet: &Handle<SpriteSheet>) {
     };
 
     world.create_entity().with(grid).with(transform).build();
-
-    let len = wid * hei;
 }
 
 fn initialize_camera(world: &mut World) {
     let mut transform = Transform::default();
-    transform.set_translation_xyz(ARENA_WIDTH * 0.5, ARENA_HEIGHT * 0.5, 1.);
+    transform.set_translation_xyz(CELL_WIDTH * 8., CELL_HEIGHT * 8., 1.);
 
     world
         .create_entity()
-        .with(Camera::standard_2d(ARENA_WIDTH, ARENA_HEIGHT))
+        .with(Camera::standard_2d(CELL_WIDTH * 16., CELL_HEIGHT * 16.))
         .with(transform)
         .build();
 }
